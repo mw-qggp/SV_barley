@@ -1,83 +1,113 @@
-FASTA = config["ref"]["fasta"]
+FASTA = "/gpfs/project/mawei111/Hv-DRR-DNAseq2020/experiments/00_genome_mutation/genome_chr1H.fa"
 
-PATH_FASTQ = "/gpfs/project/projects/qggp/Hv-DRR-DNAseq2020/data/Rawdata/"
+PATH_simulated_refs="ms_genomes/"
 
-SAMPLES = ["Ancap2", "CM67", "Georgie", "HOR12830", "HOR1842", "HOR383", "HOR7985", "HOR8160", "HvLib012", "HvLib013", "IG128104", "IG31424", "ItuNativ", "K10693", "K10877", "Kharsila", "Kombyne", "Lakhan", "Sanalta", "Sissy", "SpratArc", "Unumli_A", "W23829_8"]
-
-CHROMS = ["chr1H","chr2H","chr3H","chr4H","chr5H","chr6H","chr7H"]
+SAMPLES = ["del_50_300","del_301_5000", "del_5001_50000", "del_50001_250000", "del_250001_1000000","inv_50_300","inv_301_5000", "inv_5001_50000", "inv_50001_250000", "inv_250001_1000000","dup_50_300","dup_301_5000", "dup_5001_50000", "dup_50001_250000", "dup_250001_1000000","ins_50_300","ins_301_5000", "ins_5001_50000", "ins_50001_250000", "ins_250001_1000000"]
+COVERAGE= ["12.5","6","3","1.5"]
 
 rule all:
 	input:
-		expand("03_removePCRduplicates/{sample}_sorted_rmdup_rd.bam", sample = SAMPLES),
-		expand("04_variantCalling/gatk_SNPs_Indels_{sample}.g.vcf.gz", sample = SAMPLES),
-		expand("04_variantCalling/NGSEP2_{sample}_SV.gff", sample = SAMPLES),
-		expand("04_variantCalling/gridss_{sample}.bam", sample = SAMPLES),
-		expand("04_variantCalling/smoove_{sample}/{sample}-smoove.vcf.gz", sample = SAMPLES),
-		expand("04_variantCalling/delly_{sample}.vcf", sample = SAMPLES),
-		expand("04_variantCalling/{sample}.mantadir/results/variants/diploidSV.vcf.gz", sample = SAMPLES),
+		expand("04_variantCalling/gatk_SNPs_Indels_{sample}_{cov}.g.vcf.gz", sample = SAMPLES, cov = COVERAGE),
+		expand("04_variantCalling/NGSEP2_{sample}_{cov}_SV.gff", sample = SAMPLES, cov = COVERAGE),
+		expand("04_variantCalling/gridss_{sample}_{cov}.bam", sample = SAMPLES, cov = COVERAGE),
+		expand("04_variantCalling/smoove_{sample}_{cov}/{sample}_{cov}-smoove.vcf.gz", sample = SAMPLES, cov = COVERAGE),
+		expand("04_variantCalling/delly_{sample}_{cov}.vcf", sample = SAMPLES, cov = COVERAGE),
+		expand("04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV.vcf.gz", sample = SAMPLES, cov = COVERAGE),
 		expand("04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV_INV.vcf", sample = SAMPLES, cov = COVERAGE)
+		
+rule simulate_reads:
+	input:
+		mut_ref=PATH_simulated_refs+"genome_chr1H_mutated_{sample}.fa" 
+
+	output:
+		out1="{sample}_{cov}/{sample}_{cov}_R1.fastq.gz",
+		out2="{sample}_{cov}/{sample}_{cov}_R2.fastq.gz"
+
+	params:
+		p_1="true", 
+		p_2="40",
+		p_3="150", 
+		p_4="{cov}",
+		p_5="350",
+		p_6="450",
+		p_7="40",
+		p_8="35",
+		p_9="25"
+
+	shell:
+		"/gpfs/project/projects/qggp/src/bbmap/randomreads.sh ref={input.mut_ref} paired={params.p_1} q={params.p_2} length={params.p_3} coverage={params.p_4} mininsert={params.p_5} maxinsert={params.p_6} maxq={params.p_7} midq={params.p_8} minq={params.p_9} out1={output.out1} out2={output.out2}"
 
 rule trimming:
 	input:
-		in_r1=PATH_FASTQ+"{sample}/{sample}_1.fq.gz",
-		in_r2=PATH_FASTQ+"{sample}/{sample}_2.fq.gz"
-
+		in_r1=rules.simulate_reads.out1,
+		in_r2=rules.simulate_reads.out2
 	output:
-		out_r1_p="01_trimming/{sample}_trimmed_paired_1.fq.gz",
-		out_r1_unp="01_trimming/{sample}_trimmed_unpaired_1.fq.gz",
-		out_r2_p="01_trimming/{sample}_trimmed_paired_2.fq.gz",
-		out_r2_unp="01_trimming/{sample}_trimmed_unpaired_2.fq.gz"
+		out_r1_p="{sample}_{cov}_trimmed_paired_1.fq.gz",
+		out_r1_unp="{sample}_{cov}_trimmed_unpaired_1.fq.gz",
+		out_r2_p="{sample}_{cov}_trimmed_paired_2.fq.gz",
+		out_r2_unp="{sample}_{cov}_trimmed_unpaired_2.fq.gz"
 	shell:
-		"module load Java/1.8.0_151; java -jar /gpfs/project/projects/qggp/src/Trimmomatic-0.39/trimmomatic-0.39.jar PE -threads 20 {input.in_r1} {input.in_r2} {output.out_r1_p} {output.out_r1_unp} {output.out_r2_p} {output.out_r2_unp} ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 SLIDINGWINDOW:4:15 MINLEN:36"
+		"module load Java/1.8.0_151; java -jar /gpfs/project/projects/qggp/src/Trimmomatic-0.39/trimmomatic-0.39.jar PE -threads 3 {input.in_r1} {input.in_r2} {output.out_r1_p} {output.out_r1_unp} {output.out_r2_p} {output.out_r2_unp} ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 SLIDINGWINDOW:4:15 MINLEN:36"
 
 rule bwa_mapping:
 	input:
 		ref=FASTA,
-		fastq_r1="01_trimming/{sample}_trimmed_paired_1.fq.gz",
-		fastq_r2="01_trimming/{sample}_trimmed_paired_2.fq.gz"
+		fastq_r1=rules.trimming.output.out_r1_p,
+		fastq_r2=rules.trimming.output.out_r2_p
 
 	output:
-		sam="02_mapping/{sample}.sam"
+		sam="{sample}_{cov}.sam"
 	shell:
-		"module load BWA; bwa mem -t 20 {input.ref} {input.fastq_r1} {input.fastq_r2} >{output.sam}"
+		"module load BWA; bwa mem -t 4 {input.ref} {input.fastq_r1} {input.fastq_r2} >{output.sam}; rm {input.fastq_r1} {input.fastq_r2}"
 
 rule convert_sam:
 	input:
-		sam="02_mapping/{sample}.sam"
+		sam=rules.bwa_mapping.output.sam
 	output:
-		bam="02_mapping/{sample}_sorted.bam",
-		bai="02_mapping/{sample}_sorted.bam.bai"
+		bam="{sample}_{cov}_sorted.bam",
+		bai="{sample}_{cov}_sorted.bam.bai"
 	shell:
-		"module load SamTools; samtools view -Sb {input.sam} | samtools sort - >{output.bam}; wait; samtools index {output.bam}"
+		"module load SamTools; samtools view -Sb {input.sam} | samtools sort - >{output.bam}; rm {input.sam}; samtools index {output.bam}"
 
 rule remove_duplicates:
 	input:
-		bam="02_mapping/{sample}_sorted.bam"
+		bam="{sample}_{cov}_sorted.bam"
 	output:
-		bam="03_removePCRduplicates/{sample}_sorted_rmdup.bam",
-		txt="03_removePCRduplicates/{sample}_rmdup_metrics.txt"
+		bam="03_removePCRduplicates/{sample}_{cov}_sorted_rmdup.bam",
+		txt="03_removePCRduplicates/{sample}_{cov}_rmdup_metrics.txt"
 	shell:
-		"module load Java/1.8.0_151; java -jar /gpfs/project/projects/qggp/src/picard_2.22.0/picard.jar MarkDuplicates I={input.bam} O={output.bam} REMOVE_DUPLICATES=true METRICS_FILE={output.txt}"
+		"module load Java/1.8.0_151 SamTools; java -jar /gpfs/project/projects/qggp/src/picard_2.22.0/picard.jar MarkDuplicates I={input.bam} O={output.bam} REMOVE_DUPLICATES=true METRICS_FILE={output.txt}; rm {input.bam}"
+
+rule addReadgroup:
+	input:
+		bam=rules.remove_duplicates.output.bam
+	output:
+		bamo="03_removePCRduplicates/{sample}_{cov}_sorted_rmdup_rd.bam",
+		bai="03_removePCRduplicates/{sample}_{cov}_sorted_rmdup_rd.bam.bai"
+	shell:
+		"module load Java/1.8.0_151 SamTools; java -jar /gpfs/project/projects/qggp/src/picard_2.22.0/picard.jar AddOrReplaceReadGroups I={input.bam} O={output.bamo} RGID=group1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM=20; samtools index {output.bamo}"
 
 #########Variant calling programs########
 
 rule manta1:
 	input:
-		bam="03_removePCRduplicates/{sample}_sorted_rmdup.bam",
+		bam=rules.addReadgroup.output.bamo,
 		ref=FASTA
 	output:
-		folder="04_variantCalling/{sample}.mantadir/",
-		py="04_variantCalling/{sample}.mantadir/runWorkflow.py"	
+		py="04_variantCalling/{sample}_{cov}.mantadir/runWorkflow.py"
+	params:
+		folder="04_variantCalling/{sample}_{cov}.mantadir/"
+
 	shell:
-		"/gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/bin/configManta.py --bam {input.bam} --referenceFasta {input.ref} --runDir {output.folder}"
+		"/gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/bin/configManta.py --bam {input.bam} --referenceFasta {input.ref} --runDir {params.folder}"
 
 rule manta2:
 	input:
-		py="04_variantCalling/{sample}.mantadir/runWorkflow.py"
+		py="04_variantCalling/{sample}_{cov}.mantadir/runWorkflow.py"
 	output:
-		vcf="04_variantCalling/{sample}.mantadir/results/variants/diploidSV.vcf.gz"
+		vcf="04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV.vcf.gz"
 	shell:
-		"{input.py} -j 5 -g 5"
+		"{input.py} -j 4 -g 5"
 
 rule manta3:
 	input:
@@ -93,70 +123,63 @@ rule manta3:
 		shell("/gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/libexec/convertInversion.py /gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/libexec/samtools {input.ref} {params.vcf} >{output.vcf}")
 		shell("rm {params.vcf}")
 
+
 rule delly:
 	input:
 		ref=FASTA,
-		bam="03_removePCRduplicates/{sample}_sorted_rmdup.bam"
+		bam=rules.addReadgroup.output.bamo
 	output:
-		bcf="04_variantCalling/delly_{sample}.bcf"
+		bcf="04_variantCalling/delly_{sample}_{cov}.bcf"
 	shell:
 		"/gpfs/project/projects/qggp/src/delly_v0.8.1_linux_x86_64bit call -o {output.bcf} -g {input.ref} {input.bam}"
 
 rule delly2:
 	input:
-		bcf="04_variantCalling/delly_{sample}.bcf"
+		bcf="04_variantCalling/delly_{sample}_{cov}.bcf"
 	output:
-		vcf="04_variantCalling/delly_{sample}.vcf"
+		vcf="04_variantCalling/delly_{sample}_{cov}.vcf"
 	shell:
-		"/gpfs/project/projects/qggp/Potatodenovo/src/bcftools-1.10.2/bcftools view {input.bcf} >{output.vcf}"
+		"module load bcftools/1.12; bcftools view {input.bcf} >{output.vcf}"
 
 rule lumpy:
 	input:
-		bam="03_removePCRduplicates/{sample}_sorted_rmdup.bam",
+		bam=rules.addReadgroup.output.bamo,
 		ref=FASTA
 	output:
-		vcf="04_variantCalling/smoove_{sample}/{sample}-smoove.vcf.gz"
+		vcf="04_variantCalling/smoove_{sample}_{cov}/{sample}_{cov}-smoove.vcf.gz"
 	params:
-		outdir="04_variantCalling/smoove_{sample}",
-		name="{sample}"
+		outdir="04_variantCalling/smoove_{sample}_{cov}",
+		name="{sample}_{cov}"
 	shell:
 		"""module load SamTools lumpy/0.3.0; PATH="$HOME/bin:$PATH:/gpfs/project/projects/qggp/src/gsort"; export PATH=$PATH:/gpfs/project/projects/qggp/src:$PATH; PATH="$HOME/bin:$PATH:/home/mawei111/.conda/envs/py3/bin/mosdepth"; export PATH=$PATH:/home/mawei111/.conda/envs/py3/bin:mosdepth; /gpfs/project/projects/qggp/src/smoove call --name {params.name} --fasta {input.ref} --outdir {params.outdir} {input.bam}"""
 
 rule gridss:
 	input:
 		ref=FASTA,
-		bam="03_removePCRduplicates/{sample}_sorted_rmdup.bam"
+		bam=rules.addReadgroup.output.bamo
 
 	output:
-		vcf="04_variantCalling/gridss_{sample}.vcf",
-		bam="04_variantCalling/gridss_{sample}.bam"
+		vcf="04_variantCalling/gridss_{sample}_{cov}.vcf",
+		bam="04_variantCalling/gridss_{sample}_{cov}.bam"
 	shell:
-		"module load BWA/0.7.15 Java/1.8.0_151 sambamba/0.6.6 R/3.5.3; sh /gpfs/project/projects/qggp/src/gridss-2.6.2/scripts/gridss.sh --output {output.vcf} --threads 4 --reference {input.ref} --assembly {output.bam} --jar /gpfs/project/projects/qggp/src/gridss-2.6.2/scripts/gridss-2.8.3-gridss-jar-with-dependencies.jar --jvmheap 31g {input.bam}"
+		"module load BWA/0.7.15 Java/1.8.0_151 sambamba/0.6.6 R/3.5.3; sh /gpfs/project/projects/qggp/src/gridss-2.6.2/scripts/gridss.sh --output {output.vcf} --threads 4 --reference {input.ref} --assembly {output.bam} --jar /gpfs/project/projects/qggp/src/gridss-2.6.2/scripts/gridss-2.8.3-gridss-jar-with-dependencies.jar --jvmheap 31g {input.bam}; rm -r *.working"
 
 rule NGSEP2:
 	input:
 		ref=FASTA,
-		bam="03_removePCRduplicates/{sample}_sorted_rmdup.bam"
+		bam=rules.addReadgroup.output.bamo
 	output:
-		csv="04_variantCalling/NGSEP2_{sample}_SV.gff"
+		csv="04_variantCalling/NGSEP2_{sample}_{cov}_SV.gff"
 	params:
-		csv="04_variantCalling/NGSEP2_{sample}"
+		csv="04_variantCalling/NGSEP2_{sample}_{cov}"
 	shell:
 		"module load Java/1.8.0_151; java -jar /gpfs/project/projects/qggp/src/NGSEPcore_3.3.2.jar FindVariants -ignoreXS -noSNVS -runRD -runRP -maxAlnsPerStartPos 2 -minMQ 0 {input.ref} {input.bam} {params.csv}"
-
-rule addReadgroup:
-	input:
-		bam="03_removePCRduplicates/{sample}_sorted_rmdup.bam"
-	output:
-		bamo="03_removePCRduplicates/{sample}_sorted_rmdup_rd.bam"
-	shell:
-		"module load Java/1.8.0_151 SamTools; java -jar /gpfs/project/projects/qggp/src/picard_2.22.0/picard.jar AddOrReplaceReadGroups I={input.bam} O={output.bamo} RGID=1 RGLB=lib1 RGPL=ILLUMINA RGPU=unit1 RGSM=20; samtools index {output.bamo}"
 
 rule haplotypecaller:
 	input:
 		ref=FASTA,
-		bam="03_removePCRduplicates/{sample}_sorted_rmdup_rd.bam"
+		bam=rules.addReadgroup.output.bamo
 	output:
-		vcf="04_variantCalling/gatk_SNPs_Indels_{sample}.g.vcf.gz"
+		vcf="04_variantCalling/gatk_SNPs_Indels_{sample}_{cov}.g.vcf.gz"
 	shell:
 		"""module load Java/1.8.0_151; /gpfs/project/projects/qggp/src/gatk-4.1.6.0/gatk --java-options "-Xmx10g" HaplotypeCaller -R {input.ref} -I {input.bam} -O {output.vcf} -ERC GVCF"""
