@@ -5,17 +5,9 @@ configfile: "config.yaml"
 
 FASTA = config["ref"]["fasta"]
 
-#PATH_FASTQ = "/gpfs/project/projects/qggp/Hv-DRR-DNAseq2020/data/Rawdata/"
-PATH_FASTQ = "/gpfs/project/projects/qggp/Hv-DRR-DNAseq2020/data/Rawdata/128.120.88.251/X202SC20040457-Z01-F001/raw_data/barley_wildtyp/"
+PATH_FASTQ = "/gpfs/project/projects/qggp/Hv-DRR-DNAseq2020/data/Rawdata/"
 
-#inputWildcards = glob_wildcards(PATH_FASTQ+"{S}/*.fq.gz")
-#SAMPLES = set(inputWildcards.S)
-#READ = set(inputWildcards.R)
-#NAMES = set(inputWildcards.N)
-
-#SAMPLES = ["Ancap2", "CM67", "Georgie", "HOR12830", "HOR1842", "HOR383", "HOR7985", "HOR8160", "IG128104", "IG31424", "ItuNativ", "K10693", "K10877", "Kharsila", "Kombyne", "Lakhan", "Sanalta", "Sissy", "SpratArc", "Unumli_A", "W23829_8"]
-#SAMPLES = ["HvLib012", "HvLib013"]
-SAMPLES = ["SRR11456021","SRR11456022","SRR11456027"]
+#SAMPLES = ["Ancap2", "CM67", "Georgie", "HOR12830", "HOR1842", "HOR383", "HOR7985", "HOR8160", "HvLib012", "HvLib013" ,"IG128104", "IG31424", "ItuNativ", "K10693", "K10877", "Kharsila", "Kombyne", "Lakhan", "Sanalta", "Sissy", "SpratArc", "Unumli_A", "W23829_8"]
 
 CHROMS = ["chr1H","chr2H","chr3H","chr4H","chr5H","chr6H","chr7H"]
 
@@ -28,57 +20,6 @@ rule all:
 		expand("04_variantCalling/smoove_{sample}/{sample}-smoove.vcf.gz", sample = SAMPLES),
 		expand("04_variantCalling/delly_{sample}.vcf", sample = SAMPLES),
 		expand("04_variantCalling/{sample}.mantadir/results/variants/diploidSV.vcf.gz", sample = SAMPLES)
-		#chroms einbauen!!!
-		#expand final file
-
-module load SamTools BWA HTSlib Java/1.8.0_151 lumpy/0.3.0 sambamba/0.6.6 R/3.5.3 Bowtie2 gcc
-
-PATH="$HOME/bin:$PATH:/gpfs/project/projects/qggp/src/gsort"
-export PATH=$PATH:/gpfs/project/projects/qggp/src:$PATH
-
-PATH="$HOME/bin:$PATH:/home/mawei111/.conda/envs/py3/bin/mosdepth"
-export PATH=$PATH:/home/mawei111/.conda/envs/py3/bin:mosdepth
-
-cd $PBS_O_WORKDIR
-
-mut_genome="genome_chr1H_it.fa"
-sample="trans_it_65cov"
-ref="genome_chr1H.fa"
-
-rule simulate_reads:
-	input:
-		mut_ref="{sample}.fa" ##check correct name
-
-	output:
-		out1="{sample}_R1.fastq", ##check correct name
-		out2="{sample}_R2.fastq"
-
-	params:
-		p_1="true", 
-		p_2="40",
-		p_3="150", 
-		p_4=coverage,
-		p_5="350",
-		p_6="450",
-		p_7="40",
-		p_8="35",
-		p_9="25"
-
-	shell:
-		"/gpfs/project/projects/qggp/src/bbmap/randomreads.sh ref={input.mut_ref} paired={params.p_1} q={params.p_2} length={params.p_3} coverage={params.p_4} mininsert={params.p_5} maxinsert={params.p_6} maxq={params.p_7} midq={params.p_8} minq={params.p_9} out1={output.out1} out2={output.out2}"
-
-rule gzip:
-	input:
-		f1=rules.simulate_reads.output.out_r1
-		f2=rules.simulate_reads.output.out_r2
-	output:
-		f1="{sample}_R1.fastq.gz"
-		f2="{sample}_R2.fastq.gz"
-		
-	run:
-		shell("gzip {input.f1}")
-		shell("gzip {input.f2}")
-
 
 rule trimming:
 	input:
