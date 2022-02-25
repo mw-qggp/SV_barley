@@ -1,0 +1,107 @@
+{
+    "__default__" :
+    {
+      "account" : "denap",
+      "queue" : "default",
+      "nodes" : 1,
+      "time" : "24:00:00",
+      "mem" : "50gb",
+      "ncpus" : "8"
+    },
+    "simulate_reads":
+    {
+      "ncpus" : "1",
+      "mem" : "10gb",
+      "time" : "24:00:00"
+    },
+    "gzip":
+    {
+      "ncpus" : "1",
+      "mem" : "1gb",
+      "time" : "24:00:00"
+    },
+    "trimming":
+    {
+      "ncpus" : "3",
+      "mem" : "20gb",
+      "time" : "12:00:00"
+    },
+    "bwa_mapping":
+    {
+      "ncpus" : "4",
+      "mem" : "20gb",
+      "time" : "24:00:00"
+    },
+    "convert_sam":
+    {
+      "ncpus" : "1",
+      "mem" : "5gb",
+      "time" : "24:00:00"
+    },
+    "remove_duplicates":
+    {
+      "ncpus" : "2",
+      "mem" : "50gb",
+      "time" : "24:00:00"
+    },
+        "manta1":
+    {
+      "ncpus" : "1",
+      "mem" : "1gb",
+      "time" : "00:05:00"
+    },
+    "manta2":
+    {
+      "ncpus" : "4",
+      "mem" : "5gb",
+      "time" : "01:59:00"
+    },
+    "manta3":
+    {
+      "ncpus" : "1",
+      "mem" : "1gb",
+      "time" : "01:59:00"
+    },
+    "delly":
+    {
+      "ncpus" : "1",
+      "mem" : "5gb",
+      "time" : "24:00:00"
+    },
+    "delly2":
+    {
+      "ncpus" : "1",
+      "mem" : "20gb",
+      "time" : "24:00:00"
+    },
+    "lumpy":
+    {
+      "ncpus" : "1",
+      "mem" : "30gb",
+      "time" : "24:00:00"
+    },
+    "gridss":
+    {
+      "ncpus" : "4",
+      "mem" : "20gb",
+      "time" : "71:00:00"
+    },
+    "NGSEP2":
+    {
+      "ncpus" : "1",
+      "mem" : "10gb",
+      "time" : "71:00:00"
+    },
+    "addReadgroup":
+    {
+      "ncpus" : "1",
+      "mem" : "10gb",
+      "time" : "04:00:00"
+    },
+    "haplotypecaller":
+    {
+      "ncpus" : "1",
+      "mem" : "10gb",
+      "time" : "71:00:00"
+    }
+}
