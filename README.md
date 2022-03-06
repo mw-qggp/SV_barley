@@ -15,3 +15,7 @@ Before, some preparations were done based on the raw sequencing reads (adapter- 
 1) Trimmomatic (version 0.39)
 2) BWA-MEM (version 0.7.15)
 3) PICARD (version 2.22.0)
+
+### workflow_simulations
+
+Workflow to evaluate the different SV callers based on simulated SV as well as simulated short reads based on the first chromosome of the barley Morex reference sequence v2.
