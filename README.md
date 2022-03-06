@@ -19,3 +19,5 @@ Before, some preparations were done based on the raw sequencing reads (adapter- 
 ### workflow_simulations:
 
 Workflow to evaluate the different SV callers based on simulated SV as well as simulated short reads based on the first chromosome of the barley Morex reference sequence v2.
+
+The workflows correspond to the manuscript: Structural variants in the barley gene pool: precision and sensitivity to detect them using short-read sequencing and their association with gene expression and phenotypic variation (2022). Weisweiler, M., C. Arlt, P.-Y. Wu, D. Van Inghelandt, T. Hartwig, B. Stich. Not published yet
