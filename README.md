@@ -11,5 +11,5 @@ Snakemake workflow to detect SV using six SV callers based on Illumina short-rea
 
 Before, some preparations were done based on the raw sequencing reads (adapter- and quality-trimming, mapping, removing PCR duplicates) using:
 1) Trimmomatic (version 0.39)
-2) 2) BWA-MEM (version 0.7.15)
+2) BWA-MEM (version 0.7.15)
 3) PICARD (version 2.22.0)
