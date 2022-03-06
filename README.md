@@ -1,6 +1,6 @@
 # SV detection in the barley genome based on short-read sequencing
 
-## workflow_experimental_data:
+### workflow_experimental_data:
 
 Snakemake workflow to detect SV using six SV callers based on Illumina short-read sequencing. The following SV callers are included:
 
