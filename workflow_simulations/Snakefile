@@ -8,12 +8,10 @@ COVERAGE= ["65","25","12.5","6","3","1.5"]
 
 rule all:
 	input:
-		expand("04_variantCalling/gatk_SNPs_Indels_{sample}_{cov}.g.vcf.gz", sample = SAMPLES, cov = COVERAGE),
 		expand("04_variantCalling/NGSEP2_{sample}_{cov}_SV.gff", sample = SAMPLES, cov = COVERAGE),
 		expand("04_variantCalling/gridss_{sample}_{cov}.bam", sample = SAMPLES, cov = COVERAGE),
 		expand("04_variantCalling/smoove_{sample}_{cov}/{sample}_{cov}-smoove.vcf.gz", sample = SAMPLES, cov = COVERAGE),
 		expand("04_variantCalling/delly_{sample}_{cov}.vcf", sample = SAMPLES, cov = COVERAGE),
-		expand("04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV.vcf.gz", sample = SAMPLES, cov = COVERAGE),
 		expand("04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV_INV.vcf", sample = SAMPLES, cov = COVERAGE)
 		
 rule simulate_reads:
