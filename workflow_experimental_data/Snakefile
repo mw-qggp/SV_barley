@@ -1,4 +1,4 @@
-FASTA = config["ref"]["fasta"]
+FASTA = "/gpfs/project/projects/qggp/Morex_barley_reference_sequence_version2_2019/Barley_Morex_V2_pseudomolecules.fasta"
 
 PATH_FASTQ = "/gpfs/project/projects/qggp/Hv-DRR-DNAseq2020/data/Rawdata/"
 
