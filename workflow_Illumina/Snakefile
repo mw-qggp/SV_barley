@@ -173,12 +173,3 @@ rule NGSEP2:
 		csv="04_variantCalling/NGSEP2_{sample}_{cov}"
 	shell:
 		"module load Java/1.8.0_151; java -jar /gpfs/project/projects/qggp/src/NGSEPcore_3.3.2.jar FindVariants -ignoreXS -noSNVS -runRD -runRP -maxAlnsPerStartPos 2 -minMQ 0 {input.ref} {input.bam} {params.csv}"
-
-rule haplotypecaller:
-	input:
-		ref=FASTA,
-		bam=rules.addReadgroup.output.bamo
-	output:
-		vcf="04_variantCalling/gatk_SNPs_Indels_{sample}_{cov}.g.vcf.gz"
-	shell:
-		"""module load Java/1.8.0_151; /gpfs/project/projects/qggp/src/gatk-4.1.6.0/gatk --java-options "-Xmx10g" HaplotypeCaller -R {input.ref} -I {input.bam} -O {output.vcf} -ERC GVCF"""
