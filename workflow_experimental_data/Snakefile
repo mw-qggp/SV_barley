@@ -14,8 +14,7 @@ rule all:
 		expand("04_variantCalling/gridss_{sample}.bam", sample = SAMPLES),
 		expand("04_variantCalling/smoove_{sample}/{sample}-smoove.vcf.gz", sample = SAMPLES),
 		expand("04_variantCalling/delly_{sample}.vcf", sample = SAMPLES),
-		expand("04_variantCalling/{sample}.mantadir/results/variants/diploidSV.vcf.gz", sample = SAMPLES),
-		expand("04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV_INV.vcf", sample = SAMPLES, cov = COVERAGE)
+		expand("04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV_INV.vcf", sample = SAMPLES)
 
 rule trimming:
 	input:
