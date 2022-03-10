@@ -1,4 +1,6 @@
-#Python/3.6.5
+#!/bin/bash
+
+#Python/3.6.5 was used
 
 mkdir ms_genomes/
 mkdir ms_vcfs/
