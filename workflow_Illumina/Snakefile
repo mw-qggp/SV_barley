@@ -8,11 +8,11 @@ COVERAGE= ["65","25","12.5","6","3","1.5"]
 
 rule all:
 	input:
-		expand("04_variantCalling/NGSEP2_{sample}_{cov}_SV.gff", sample = SAMPLES, cov = COVERAGE),
-		expand("04_variantCalling/gridss_{sample}_{cov}.bam", sample = SAMPLES, cov = COVERAGE),
-		expand("04_variantCalling/smoove_{sample}_{cov}/{sample}_{cov}-smoove.vcf.gz", sample = SAMPLES, cov = COVERAGE),
-		expand("04_variantCalling/delly_{sample}_{cov}.vcf", sample = SAMPLES, cov = COVERAGE),
-		expand("04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV_INV.vcf", sample = SAMPLES, cov = COVERAGE)
+		expand("Illumina/NGSEP2_{sample}_{cov}_SV.gff", sample = SAMPLES, cov = COVERAGE),
+		expand("Illumina/gridss_{sample}_{cov}.bam", sample = SAMPLES, cov = COVERAGE),
+		expand("Illumina/smoove_{sample}_{cov}/{sample}_{cov}-smoove.vcf.gz", sample = SAMPLES, cov = COVERAGE),
+		expand("Illumina/delly_{sample}_{cov}.vcf", sample = SAMPLES, cov = COVERAGE),
+		expand("Illumina/{sample}_{cov}.mantadir/results/variants/diploidSV_INV.vcf", sample = SAMPLES, cov = COVERAGE)
 		
 rule simulate_reads:
 	input:
@@ -93,18 +93,18 @@ rule manta1:
 		bam=rules.addReadgroup.output.bamo,
 		ref=FASTA
 	output:
-		py="04_variantCalling/{sample}_{cov}.mantadir/runWorkflow.py"
+		py="Illumina/{sample}_{cov}.mantadir/runWorkflow.py"
 	params:
-		folder="04_variantCalling/{sample}_{cov}.mantadir/"
+		folder="Illumina/{sample}_{cov}.mantadir/"
 
 	shell:
 		"/gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/bin/configManta.py --bam {input.bam} --referenceFasta {input.ref} --runDir {params.folder}"
 
 rule manta2:
 	input:
-		py="04_variantCalling/{sample}_{cov}.mantadir/runWorkflow.py"
+		py="Illumina/{sample}_{cov}.mantadir/runWorkflow.py"
 	output:
-		vcf="04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV.vcf.gz"
+		vcf="Illumina/{sample}_{cov}.mantadir/results/variants/diploidSV.vcf.gz"
 	shell:
 		"{input.py} -j 4 -g 5"
 
@@ -113,10 +113,10 @@ rule manta3:
 		vcf=rules.manta2.output.vcf,
 		ref=FASTA
 	output:
-		vcf="04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV_INV.vcf"
+		vcf="Illumina/{sample}_{cov}.mantadir/results/variants/diploidSV_INV.vcf"
 	params:
-		vcf="04_variantCalling/{sample}_{cov}.mantadir/results/variants/diploidSV.vcf",
-		workspace="04_variantCalling/{sample}_{cov}.mantadir/workspace/"
+		vcf="Illumina/{sample}_{cov}.mantadir/results/variants/diploidSV.vcf",
+		workspace="Illumina/{sample}_{cov}.mantadir/workspace/"
 	run:
 		shell("zcat {input.vcf} >{params.vcf}")
 		shell("/gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/libexec/convertInversion.py /gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/libexec/samtools {input.ref} {params.vcf} >{output.vcf}")
@@ -128,15 +128,15 @@ rule delly:
 		ref=FASTA,
 		bam=rules.addReadgroup.output.bamo
 	output:
-		bcf="04_variantCalling/delly_{sample}_{cov}.bcf"
+		bcf="Illumina/delly_{sample}_{cov}.bcf"
 	shell:
 		"/gpfs/project/projects/qggp/src/delly_v0.8.1_linux_x86_64bit call -o {output.bcf} -g {input.ref} {input.bam}"
 
 rule delly2:
 	input:
-		bcf="04_variantCalling/delly_{sample}_{cov}.bcf"
+		bcf="Illumina/delly_{sample}_{cov}.bcf"
 	output:
-		vcf="04_variantCalling/delly_{sample}_{cov}.vcf"
+		vcf="Illumina/delly_{sample}_{cov}.vcf"
 	shell:
 		"module load bcftools/1.12; bcftools view {input.bcf} >{output.vcf}"
 
@@ -145,9 +145,9 @@ rule lumpy:
 		bam=rules.addReadgroup.output.bamo,
 		ref=FASTA
 	output:
-		vcf="04_variantCalling/smoove_{sample}_{cov}/{sample}_{cov}-smoove.vcf.gz"
+		vcf="Illumina/smoove_{sample}_{cov}/{sample}_{cov}-smoove.vcf.gz"
 	params:
-		outdir="04_variantCalling/smoove_{sample}_{cov}",
+		outdir="Illumina/smoove_{sample}_{cov}",
 		name="{sample}_{cov}"
 	shell:
 		"""module load SamTools lumpy/0.3.0; PATH="$HOME/bin:$PATH:/gpfs/project/projects/qggp/src/gsort"; export PATH=$PATH:/gpfs/project/projects/qggp/src:$PATH; PATH="$HOME/bin:$PATH:/home/mawei111/.conda/envs/py3/bin/mosdepth"; export PATH=$PATH:/home/mawei111/.conda/envs/py3/bin:mosdepth; /gpfs/project/projects/qggp/src/smoove call --name {params.name} --fasta {input.ref} --outdir {params.outdir} {input.bam}"""
@@ -158,8 +158,8 @@ rule gridss:
 		bam=rules.addReadgroup.output.bamo
 
 	output:
-		vcf="04_variantCalling/gridss_{sample}_{cov}.vcf",
-		bam="04_variantCalling/gridss_{sample}_{cov}.bam"
+		vcf="Illumina/gridss_{sample}_{cov}.vcf",
+		bam="Illumina/gridss_{sample}_{cov}.bam"
 	shell:
 		"module load BWA/0.7.15 Java/1.8.0_151 sambamba/0.6.6 R/3.5.3; sh /gpfs/project/projects/qggp/src/gridss-2.6.2/scripts/gridss.sh --output {output.vcf} --threads 4 --reference {input.ref} --assembly {output.bam} --jar /gpfs/project/projects/qggp/src/gridss-2.6.2/scripts/gridss-2.8.3-gridss-jar-with-dependencies.jar --jvmheap 31g {input.bam}; rm -r *.working"
 
@@ -168,8 +168,8 @@ rule NGSEP2:
 		ref=FASTA,
 		bam=rules.addReadgroup.output.bamo
 	output:
-		csv="04_variantCalling/NGSEP2_{sample}_{cov}_SV.gff"
+		csv="Illumina/NGSEP2_{sample}_{cov}_SV.gff"
 	params:
-		csv="04_variantCalling/NGSEP2_{sample}_{cov}"
+		csv="Illumina/NGSEP2_{sample}_{cov}"
 	shell:
 		"module load Java/1.8.0_151; java -jar /gpfs/project/projects/qggp/src/NGSEPcore_3.3.2.jar FindVariants -ignoreXS -noSNVS -runRD -runRP -maxAlnsPerStartPos 2 -minMQ 0 {input.ref} {input.bam} {params.csv}"
