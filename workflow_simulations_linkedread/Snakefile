@@ -1,0 +1,155 @@
+FASTA = "/gpfs/project/mawei111/Hv-DRR-DNAseq2020/experiments/00_genome_mutation/genome_chr1H.fa"
+
+PATH_simulated_refs="ms_genomes/"
+
+SAMPLES = ["del_50_300","del_301_5000", "del_5001_50000", "del_50001_250000", "del_250001_1000000","inv_50_300","inv_301_5000", "inv_5001_50000", "inv_50001_250000", "inv_250001_1000000","dup_50_300","dup_301_5000", "dup_5001_50000", "dup_50001_250000", "dup_250001_1000000","ins_50_300","ins_301_5000", "ins_5001_50000", "ins_50001_250000", "ins_250001_1000000","trans_it"]
+RATES=["26","45"] #Number of X Mio. linked paired-end reads corresponds to 14x and 25x sequencing coverage
+
+rule all:
+	input:
+		expand("linkedread_simulations/NGSEP2_{sample}_{rate}_SV.gff", sample = SAMPLES, rate = RATES),
+		expand("linkedread_simulations/gridss_{sample}_{rate}.vcf", sample = SAMPLES, rate = RATES),
+		expand("linkedread_simulations/smoove_{sample}_{rate}/{sample}_{rate}-smoove.vcf.gz", sample = SAMPLES, rate = RATES),
+		expand("linkedread_simulations/delly_{sample}_{rate}.vcf", sample = SAMPLES, rate = RATES),
+		expand("linkedread_simulations/{sample}_{rate}.mantadir/results/variants/diploidSV_INV.vcf", sample = SAMPLES, rate = RATES)
+
+rule read_simulation:
+	input:
+		ref=PATH_simulated_refs+"genome_chr1H_mutated_{sample}.fa"
+	output:
+		reads1="{sample}_{rate}_S1_L001_R1_001.fastq.gz",
+		reads2="{sample}_{rate}_S1_L001_R2_001.fastq.gz",
+		reads3="{sample}_{rate}_S1_L002_R1_001.fastq.gz",
+		reads4="{sample}_{rate}_S1_L002_R2_001.fastq.gz"
+
+	params:
+		rat="{rate}",
+		sample="{sample}_{rate}"
+
+	run:
+		shell("mkdir {params.sample}")
+		shell("cd {params.sample}; perl /gpfs/project/projects/qggp/src/LRSIM/simulateLinkedReads.pl -r {input.ref} -p {params.sample} -x {params.rat} -f 50 -t 1 -m 10 -o -n -1 100000000 -z 8 ; mv *.fastq.gz ../ ; cd ../ ")
+
+		shell("rm -r {params.sample}/ {input.ref}")
+######
+
+rule gzip_reads:
+	input:
+		reads1="{sample}_{rate}_S1_L001_R1_001.fastq.gz",
+		reads2="{sample}_{rate}_S1_L001_R2_001.fastq.gz",
+		reads3="{sample}_{rate}_S1_L002_R1_001.fastq.gz",
+		reads4="{sample}_{rate}_S1_L002_R2_001.fastq.gz"
+	output:
+		reads1="{sample}_{rate}_reads/{sample}_{rate}_val_S1_L001_R1_001.fastq.gz",
+		reads2="{sample}_{rate}_reads/{sample}_{rate}_val_S1_L001_R2_001.fastq.gz",
+		reads3="{sample}_{rate}_reads/{sample}_{rate}_val_S1_L002_R1_001.fastq.gz",
+		reads4="{sample}_{rate}_reads/{sample}_{rate}_val_S1_L002_R2_001.fastq.gz"
+	params:
+		dir1=directory("{sample}_reads/")
+	run:
+		shell("""gzip -cd {input.reads1} | sed "/\@/s/\/1//g" | gzip >{output.reads1}""")
+		shell("""gzip -cd {input.reads2} | sed "/\@/s/\/2//g" | gzip >{output.reads2}""")
+		shell("""gzip -cd {input.reads3} | sed "/\@/s/\/1//g" | gzip >{output.reads3}""")
+		shell("""gzip -cd {input.reads4} | sed "/\@/s/\/2//g" | gzip >{output.reads4}""")
+
+		shell("rm {input.reads1} {input.reads2} {input.reads3} {input.reads4}")
+
+rule mapping:
+	input:
+		dummy_file=rules.gzip_reads.output.reads4
+	output:
+		bam="{sample}_{rate}_longranger/outs/phased_possorted_bam.bam"
+	params:
+		sample="{sample}_{rate}_longranger",
+		dir1=rules.gzip_reads.params.dir1
+	run:
+		shell("rm -r {params.sample}; module load freebayes/1.3.1; /gpfs/project/projects/qggp/src/longranger-2.2.2/longranger wgs --id={params.sample} --reference=refdata-genome_chr1H --fastqs={params.dir1} --vcmode freebayes --sex male --localcores=4 --localmem=35")
+		shell("rm -r {params.dir1}; rm -r {params.sample}/PHASER_SVCALLER_CS/")
+
+#########Variant calling programs########
+
+rule manta1:
+	input:
+		bam=rules.mapping.output.bam,
+		ref=FASTA
+	output:
+		py="linkedread_simulations/{sample}_{rate}.mantadir/runWorkflow.py"
+	params:
+		folder="linkedread_simulations/{sample}_{rate}.mantadir/"
+
+	shell:
+		"/gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/bin/configManta.py --bam {input.bam} --referenceFasta {input.ref} --runDir {params.folder}"
+
+rule manta2:
+	input:
+		py="linkedread_simulations/{sample}_{rate}.mantadir/runWorkflow.py"
+	output:
+		vcf="linkedread_simulations/{sample}_{rate}.mantadir/results/variants/diploidSV.vcf.gz"
+	shell:
+		"{input.py} -j 4 -g 5"
+
+rule manta3:
+	input:
+		vcf=rules.manta2.output.vcf,
+		ref=FASTA
+	output:
+		vcf="linkedread_simulations/{sample}_{rate}.mantadir/results/variants/diploidSV_INV.vcf"
+	params:
+		vcf="linkedread_simulations/{sample}_{rate}.mantadir/results/variants/diploidSV.vcf",
+		workspace="linkedread_simulations/{sample}_{rate}.mantadir/workspace/"
+	run:
+		shell("zcat {input.vcf} >{params.vcf}")
+		shell("/gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/libexec/convertInversion.py /gpfs/project/projects/qggp/src/manta-1.6.0.centos6_x86_64/libexec/samtools {input.ref} {params.vcf} >{output.vcf}")
+		shell("rm {params.vcf}")
+
+
+rule delly:
+	input:
+		ref=FASTA,
+		bam=rules.mapping.output.bam
+	output:
+		bcf="linkedread_simulations/delly_{sample}_{rate}.bcf"
+	shell:
+		"/gpfs/project/projects/qggp/src/delly_v0.8.1_linux_x86_64bit call -o {output.bcf} -g {input.ref} {input.bam}"
+
+rule delly2:
+	input:
+		bcf="linkedread_simulations/delly_{sample}_{rate}.bcf"
+	output:
+		vcf="linkedread_simulations/delly_{sample}_{rate}.vcf"
+	shell:
+		"module load bcftools/1.12; bcftools view {input.bcf} >{output.vcf}"
+
+rule lumpy:
+	input:
+		bam=rules.mapping.output.bam,
+		ref=FASTA
+	output:
+		vcf="linkedread_simulations/smoove_{sample}_{rate}/{sample}_{rate}-smoove.vcf.gz"
+	params:
+		outdir="linkedread_simulations/smoove_{sample}_{rate}",
+		name="{sample}_{rate}"
+	shell:
+		"""module load SamTools lumpy/0.3.0; PATH="$HOME/bin:$PATH:/gpfs/project/projects/qggp/src/gsort"; export PATH=$PATH:/gpfs/project/projects/qggp/src:$PATH; PATH="$HOME/bin:$PATH:/home/mawei111/.conda/envs/py3/bin/mosdepth"; export PATH=$PATH:/home/mawei111/.conda/envs/py3/bin:mosdepth; /gpfs/project/projects/qggp/src/smoove call --name {params.name} --fasta {input.ref} --outdir {params.outdir} {input.bam}"""
+
+rule gridss:
+	input:
+		ref=FASTA,
+		bam=rules.mapping.output.bam
+
+	output:
+		vcf="linkedread_simulations/gridss_{sample}_{rate}.vcf",
+		bam="linkedread_simulations/gridss_{sample}_{rate}.bam"
+	shell:
+		"module load BWA/0.7.15 Java/1.8.0_151 sambamba/0.6.6 R/3.5.3; sh /gpfs/project/projects/qggp/src/gridss-2.6.2/scripts/gridss.sh --output {output.vcf} --threads 4 --reference {input.ref} --assembly {output.bam} --jar /gpfs/project/projects/qggp/src/gridss-2.6.2/scripts/gridss-2.8.3-gridss-jar-with-dependencies.jar --jvmheap 31g {input.bam}; rm -r *.working"
+
+rule NGSEP2:
+	input:
+		ref=FASTA,
+		bam=rules.mapping.output.bam
+	output:
+		csv="linkedread_simulations/NGSEP2_{sample}_{rate}_SV.gff"
+	params:
+		csv="linkedread_simulations/NGSEP2_{sample}_{rate}"
+	shell:
+		"module load Java/1.8.0_151; java -jar /gpfs/project/projects/qggp/src/NGSEPcore_3.3.2.jar FindVariants -ignoreXS -noSNVS -runRD -runRP -maxAlnsPerStartPos 2 -minMQ 0 {input.ref} {input.bam} {params.csv}"
