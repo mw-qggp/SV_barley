@@ -21,4 +21,4 @@ Before, some preparations were done based on the raw sequencing reads (adapter- 
 Workflow to evaluate the different SV callers based on simulated SV as well as simulated short- and linked-reads based on the first chromosome of the barley Morex reference sequence v2.
 
 ## References
-Structural variants in the barley gene pool: precision and sensitivity to detect them using short-read sequencing and their association with gene expression and phenotypic variation (2022). Weisweiler, M., C. Arlt, P.-Y. Wu, D. Van Inghelandt, T. Hartwig, B. Stich. https://www.biorxiv.org/content/10.1101/2022.04.25.489331v1
+Weisweiler, M., Arlt, C., Wu, PY. et al. Structural variants in the barley gene pool: precision and sensitivity to detect them using short-read sequencing and their association with gene expression and phenotypic variation. Theor Appl Genet 135, 3511–3529 (2022). https://doi.org/10.1007/s00122-022-04197-7
